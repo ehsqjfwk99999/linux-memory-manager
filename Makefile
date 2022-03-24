@@ -1,9 +1,13 @@
-all: mm.o testapp.o
-	gcc -g mm.o testapp.o
+CC := gcc
+SRCS := $(wildcard *.c)
+OBJS := $(SRCS:c=o)
+
+all: $(OBJS)
+	$(CC) -g $^
 mm.o: mm.c
-	gcc -c mm.c -o mm.o
+	$(CC) -c mm.c -o $@
 testapp.o: testapp.c
-	gcc -c testapp.c -o testapp.o
+	$(CC) -c testapp.c -o $@
 clean:
 	[ -f a.out ] && rm a.out || true
-	[ -f *.o ] && rm *.o || true
+	for obj in $(OBJS); do [ -f $$obj ] && rm $$obj || true; done
