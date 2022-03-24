@@ -121,3 +121,61 @@ static void mm_union_free_blocks(block_meta_data_t *first,
     second->next_block->prev_block = first;
   }
 }
+
+vm_bool_t mm_is_vm_page_emtpy(vm_page_t *vm_page) {
+  if (vm_page->block_meta_data.next_block == NULL &&
+      vm_page->block_meta_data.prev_block == NULL &&
+      vm_page->block_meta_data.is_free == MM_TRUE) {
+    return MM_TRUE;
+  }
+  return MM_FALSE;
+}
+
+static inline size_t mm_max_page_allocatable_memory(int units) {
+  return (size_t)(SYSTEM_PAGE_SIZE * units - offset_of(vm_page_t, page_memory));
+}
+
+vm_page_t *allocate_vm_page(vm_page_family_t *vm_page_family) {
+  vm_page_t *vm_page = mm_get_new_vm_page_from_kernel(1);
+
+  MARK_VM_PAGE_EMPTY(vm_page)
+
+  vm_page->block_meta_data.block_size = mm_max_page_allocatable_memory(1);
+  vm_page->block_meta_data.offset = offset_of(vm_page_t, block_meta_data);
+
+  vm_page->next = NULL;
+  vm_page->prev = NULL;
+
+  vm_page->pg_family = vm_page_family;
+
+  if (!vm_page_family->first_page) {
+    vm_page_family->first_page = vm_page;
+    return vm_page;
+  }
+
+  vm_page->next = vm_page_family->first_page;
+  vm_page_family->first_page->prev = vm_page;
+  vm_page_family->first_page = vm_page;
+  return vm_page;
+}
+
+void mm_vm_page_delete_and_free(vm_page_t *vm_page) {
+  vm_page_family_t *vm_page_family = vm_page->pg_family;
+
+  if (vm_page_family->first_page == vm_page) {
+    vm_page_family->first_page = vm_page->next;
+    if (vm_page->next) {
+      vm_page->next->prev = NULL;
+    }
+    vm_page->next = NULL;
+    vm_page->prev = NULL;
+    mm_return_vm_page_to_kernel((void *)vm_page, 1);
+    return;
+  }
+
+  if (vm_page->next) {
+    vm_page->next->prev = vm_page->prev;
+  }
+  vm_page->prev->next = vm_page->next;
+  mm_return_vm_page_to_kernel((void *)vm_page, 1);
+}
