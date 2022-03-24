@@ -1,6 +1,7 @@
 #ifndef _MM_H_
 #define _MM_H_
 
+#include "glthread.h"
 #include <unistd.h>
 
 #define MM_MAX_STRUCT_NAME 32
@@ -10,9 +11,10 @@ typedef enum { MM_FALSE, MM_TRUE } vm_bool_t;
 typedef struct block_meta_data_ {
   vm_bool_t is_free;
   size_t block_size;
+  size_t offset;
+  glthread_t priority_thread_glue;
   struct block_meta_data_ *prev_block;
   struct block_meta_data_ *next_block;
-  size_t offset;
 } block_meta_data_t;
 
 typedef struct vm_page_ {
@@ -27,6 +29,7 @@ typedef struct vm_page_family_ {
   char struct_name[MM_MAX_STRUCT_NAME];
   size_t struct_size;
   vm_page_t *first_page;
+  glthread_t free_block_priority_list_head;
 } vm_page_family_t;
 
 typedef struct vm_page_for_families_ {
